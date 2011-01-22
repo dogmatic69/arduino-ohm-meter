@@ -39,7 +39,7 @@ float Vout = 0.0;
 /**
  * The resitor we are trying to calculate
  */
-float Runknown = 0.0;
+unsigned int Runknown = 0.0;
 
 /**
  * Voltage being fed, calculated from arduino chip
@@ -72,11 +72,27 @@ int lcdE = 10;
 LiquidCrystal lcd(lcdRS, lcdRW, lcdE, data4, data3, data2, data1);
 
 /**
+ * custom ohm char for the display
+ */
+byte ohmChar[8] = {
+  B01110,
+  B10001,
+  B10001,
+  B10001,
+  B01010,
+  B11011,
+  B00000,
+};
+
+/**
  * Setup function called by arduino when the board is powered up
  */
 void setup(){
+	lcd.createChar(0, ohmChar);
+	
 	lcd.begin(16, 2);
-	lcd.print("ohm meter v0.001");
+	lcd.print(0);
+	lcd.print(" meter v0.001");
 	lcd.setCursor(0, 1);
 	lcd.print("By: dogmatic69");
 	delay(1000);  
@@ -99,10 +115,10 @@ float readVcc() {
  * Called when there is no resistor in the circuit
  * Could be something like a 1M ohm or broken resistor
  */
-void disconnected(){
-	lcd.print(Runknown);
+void disconnected(float resistor, float Vin){
+	lcd.print(resistor);
 	lcd.setCursor(0, 1);
-	lcd.print("Disconnected");
+	lcd.print("Dis   Vin: +");
 	lcd.print(Vin);
 }
 
@@ -110,8 +126,11 @@ void disconnected(){
  * called when there is a short in the circuit.
  * This could mean that its something like a 1ohm resistor or a piece of wire
  */
-void shorted(){
+void shorted(float resistor, float Vin){
 	lcd.print(Runknown);
+	lcd.print("  ");
+	lcd.print(Vin);
+	lcd.print(" Vin");
 	lcd.setCursor(0, 1);
 	lcd.print("Dead short");
 }
@@ -123,11 +142,11 @@ void loop(){
 	Vin = readVcc();
   
 	if(raw == 1023){
-		disconnected();
+		disconnected(Runknown, Vin);
 	}
   
 	else if(raw == 0){
-		shorted();
+		shorted(Runknown, Vin);
 	}
   
 	else{
@@ -135,42 +154,35 @@ void loop(){
 		I = (Vin - Vout) / Rknown;
 		Runknown = (Vout / I);
 
-		lcd.setCursor(6, 0);
-		lcd.print(Vout);
-
-		tmp = 0;
 		if(Runknown > 100){
 			if(Runknown > 1000){
 				if(Runknown > 5000){
 					if(Runknown > 20000){
 						if(Runknown > 100000){
-						tmp = int(Runknown / 10000) * 10000;
+						Runknown = int(Runknown / 10000) * 10000;
 						}
 						else{
-							tmp = int(Runknown / 1000) * 1000;
+							Runknown = int(Runknown / 1000) * 1000;
 						}
 					}
 					else{
-						tmp = int(Runknown / 100) * 100;
+						Runknown = int(Runknown / 100) * 100;
 					}
 				}
 				else{
-					tmp = int(Runknown / 10) * 10;
+					Runknown = int(Runknown / 10) * 10;
 				}
 			}
 			else{
-				tmp = int(Runknown);
+				Runknown = int(Runknown);
 			}
 		}
     
+		lcd.print(Runknown);
 		lcd.setCursor(0, 1);
-		if(tmp > 0){
-			lcd.print(tmp);
-		}
-		
-		else{
-			lcd.print(Runknown);
-		}
+
+		lcd.print("Vout: +");
+		lcd.print(Vout);
 	}
 	
 	delay(500);
